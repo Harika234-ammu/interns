@@ -1,0 +1,59 @@
+.booking-page {
+  max-width: 480px;
+  margin: 60px auto;
+  padding: 32px;
+  background: #ffffff;
+  border-radius: 14px;
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.12);
+  font-family: "Poppins", sans-serif;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.booking-page h2 {
+  text-align: center;
+  color: #1e293b;
+  margin-bottom: 10px;
+}
+
+.doctor-info {
+  background: #f1f5ff;
+  padding: 12px;
+  border-radius: 10px;
+  font-size: 0.95rem;
+}
+
+.booking-page label {
+  font-weight: 600;
+  margin-top: 12px;
+}
+
+.booking-page input {
+  padding: 12px;
+  border-radius: 8px;
+  border: 1.5px solid #cbd5e1;
+  font-size: 1rem;
+}
+
+.booking-page input:focus {
+  border-color: #2563eb;
+  outline: none;
+}
+
+.proceed-btn {
+  margin-top: 18px;
+  padding: 14px;
+  background: #2563eb;
+  color: #fff;
+  border: none;
+  border-radius: 10px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.2s, transform 0.15s;
+}
+
+.proceed-btn:hover {
+  background: #1e40af;
+  transform: translateY(-2px);
+}

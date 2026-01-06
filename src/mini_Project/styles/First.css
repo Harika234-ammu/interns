@@ -1,0 +1,100 @@
+/* MAIN HERO SECTION */
+.hero {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  height: 100vh;
+  padding: 60px 80px;
+  background: #eaf3ff;  /* Light page background */
+}
+
+/* LEFT SIDE TEXT (DO NOT CHANGE STRUCTURE) */
+.hero-left {
+  width: 47%;
+}
+
+.hero-left h1 {
+  font-size: 60px;
+  font-weight: 800;
+  line-height: 1.15;
+  color: #0d1b2a;
+}
+
+.hero-left h1 span {
+  color: #007aff;
+}
+
+.hero-left p {
+  margin-top: 22px;
+  font-size: 19px;
+  line-height: 1.6;
+  color: #233753;
+  width: 90%;
+}
+
+.buttons {
+  display: flex;
+  gap: 18px;
+  margin-top: 35px;
+}
+
+.patient-btn,
+.doctor-btn {
+  padding: 14px 34px;
+  font-size: 18px;
+  border-radius: 10px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.patient-btn {
+  background: #007aff;
+  border: none;
+  color: white;
+}
+.patient-btn:hover { background: #0062d1; }
+
+.doctor-btn {
+  border: 2px solid #007aff;
+  background: transparent;
+  color: #007aff;
+}
+.doctor-btn:hover {
+  background: #007aff;
+  color: white;
+}
+
+/* RIGHT SIDE DOCTOR SECTION (FIXED SIZE & GLOW) */
+.hero-image {
+  width: 53%;
+  position: relative;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+/* BLUE BACKGROUND GLOW (LIKE REFERENCE IMAGE) */
+.hero-image::before {
+  content: "";
+  position: absolute;
+  width: 650px;
+  height: 650px;
+  background: radial-gradient(circle,
+    rgba(110,160,255,0.55) 0%,
+    rgba(150,190,255,0.40) 35%,
+    rgba(210,230,255,0.10) 70%,
+    rgba(234,243,255,0) 100%);
+  border-radius: 50%;
+  right: 0;
+  transform: translateX(20%);
+  z-index: 0;
+  filter: blur(4px);
+}
+
+/* DOCTOR IMAGE FINAL FIX */
+.hero-image img {
+  width: 2000px;            /* Bigger like reference */
+  position: relative;
+  z-index: 2;
+  object-fit: contain;
+}

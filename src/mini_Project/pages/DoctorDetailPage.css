@@ -1,0 +1,139 @@
+.doctor-detail-page {
+  width: 100%;
+  min-height: 100vh;
+  background: linear-gradient(to right, #e0f7fa, #f1f8ff);
+  padding: 40px 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  font-family: "Poppins", sans-serif;
+}
+
+/* Doctor Info Box */
+.doctor-info-box {
+  width: 90%;
+  max-width: 700px;
+  background: #ffffff;
+  border-radius: 16px;
+  padding: 30px;
+  margin-bottom: 30px;
+  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.1);
+  text-align: center;
+}
+
+.doctor-name {
+  font-size: 2rem;
+  font-weight: 700;
+  margin-bottom: 15px;
+  color: #185a9d;
+}
+
+.doctor-info-box p {
+  margin: 6px 0;
+  color: #333;
+}
+
+/* Buttons */
+.button-group {
+  display: flex;
+  justify-content: center;
+  gap: 15px;
+  margin-top: 15px;
+}
+
+.book-btn,
+.review-btn,
+.back-btn {
+  padding: 12px 20px;
+  font-weight: 600;
+  border: none;
+  border-radius: 10px;
+  cursor: pointer;
+  transition: 0.3s;
+}
+
+.book-btn {
+  background-color: #28a745;
+  color: white;
+}
+.book-btn:hover {
+  background-color: #218838;
+}
+
+.review-btn {
+  background-color: #007bff;
+  color: white;
+}
+.review-btn:hover {
+  background-color: #0056b3;
+}
+
+.back-btn {
+  background-color: #6c757d;
+  color: white;
+}
+.back-btn:hover {
+  background-color: #5a6268;
+}
+
+/* Reviews */
+.review-box {
+  width: 90%;
+  max-width: 700px;
+  background: #f7f9fc;
+  border-radius: 16px;
+  padding: 25px;
+  margin-bottom: 30px;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+}
+
+.patient-review {
+  background: #ffffff;
+  padding: 12px 15px;
+  margin: 10px 0;
+  border-radius: 10px;
+  box-shadow: 0 2px 6px rgba(0,0,0,0.05);
+}
+
+.patient-review p:first-child {
+  font-weight: 600;
+  color: #185a9d;
+}
+
+/* Add Review */
+.add-review-box {
+  width: 90%;
+  max-width: 700px;
+  background: #ffffff;
+  border-radius: 16px;
+  padding: 25px;
+  margin-bottom: 30px;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.add-review-box input,
+.add-review-box textarea {
+  width: 100%;
+  padding: 10px;
+  border-radius: 8px;
+  border: 1px solid #ccc;
+  font-size: 0.95rem;
+}
+
+.add-review-box button {
+  padding: 12px 18px;
+  background: #007bff;
+  color: #fff;
+  font-weight: 600;
+  border: none;
+  border-radius: 10px;
+  cursor: pointer;
+  transition: 0.3s;
+}
+
+.add-review-box button:hover {
+  background: #0056b3;
+}

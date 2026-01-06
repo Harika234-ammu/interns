@@ -1,0 +1,112 @@
+/* DocDashboard.css — layout for left profile + right stacked accordions */
+
+/* reset-ish */
+* { box-sizing: border-box; }
+
+/* page container */
+.dashboard-container {
+  background: linear-gradient(180deg,#f7fbff 0%, #f7faff 60%);
+  border-radius: 14px;
+  padding: 28px;
+  margin: 20px auto;
+  max-width: 1280px;
+  font-family: "Poppins","Segoe UI", Roboto, Arial, sans-serif;
+  color: #16325c;
+}
+
+/* header */
+.dashboard-header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 18px;
+}
+.dashboard-header h2 { font-size: 1.9rem; margin:0; color:#1b3566; }
+
+/* Two-column layout:
+   Left = profile area (flexible), Right = stacked widgets column (fixed width)
+*/
+.dashboard-grid {
+  display: grid;
+  grid-template-columns: 1fr 420px; /* left flexible, right narrow column */
+  gap: 20px;
+  align-items: start;
+  width: 100%;
+}
+
+/* Left column widget (profile) */
+.profile-widget {
+  background: #fff;
+  border-radius: 12px;
+  padding: 18px;
+  box-shadow: 0 8px 20px rgba(14,36,80,0.06);
+  min-height: 420px;
+}
+
+/* Right column container (holds stacked widgets) */
+.right-stack {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+/* Each stacked widget (keeps previous styles) */
+.dashboard-widget {
+  background-color: #ffffff;
+  border-radius: 12px;
+  padding: 12px;
+  min-height: 130px;
+  box-shadow: 0 8px 20px rgba(14,36,80,0.06);
+  transition: transform 180ms ease, box-shadow 180ms ease;
+  display: flex;
+  flex-direction: column;
+}
+
+/* make the collapsible wrapper fill the dashboard-widget */
+.dashboard-widget .collapse { width: 100%; }
+
+/* widget header */
+.dashboard-widget h3 {
+  font-size: 1.05rem;
+  margin: 0 0 8px;
+  color: #173056;
+  padding-bottom: 6px;
+  border-bottom: 1px solid #eef4ff;
+  text-align: left;
+}
+
+/* existing classes used inside widget (from earlier CSS) */
+.widget-body { padding-top: 8px; }
+
+/* collapse styles (keep from earlier snippet) */
+.collapse { border-radius: 10px; overflow: hidden; background: transparent; }
+.collapse-header { display:flex; align-items:center; justify-content:space-between; gap:10px; cursor:pointer; padding:6px 2px; border-bottom:1px solid #eef6ff; }
+.collapse-header .title { font-weight:700; color:#16325c; display:flex; gap:8px; align-items:center; }
+.collapse-content { overflow:hidden; transition: max-height 300ms cubic-bezier(.2,.9,.2,1), padding 200ms; max-height:0; padding:0 0; }
+.collapse-content.expanded { max-height:900px; padding:10px 0; }
+.collapse-scroll { max-height:420px; overflow-y:auto; padding-right:6px; }
+.caret { width:18px; height:18px; transition:transform 200ms ease; transform-origin:center; }
+.caret.open { transform: rotate(180deg); }
+
+/* list item & status badge */
+.list-item { background: linear-gradient(180deg,#fff 0%, #fbfdff 100%); border-radius:10px; padding:10px; margin-bottom:10px; border:1px solid #eef6ff; }
+.status-badge { padding:6px 8px; border-radius:999px; font-weight:600; font-size:0.8rem; }
+.status-badge.scheduled { background:#eaf3ff; color:#185a9d; }
+.status-badge.completed { background:#e8f8ef; color:#1d8a46; }
+.status-badge.cancelled { background:#fff3f3; color:#b32b2b; }
+
+/* input & save button style used in profile */
+.input, input[type="text"], input[type="number"], textarea {
+  width:100%; padding:10px 12px; border-radius:8px; border:1px solid #e2e8f0; background:#fbfdff; font-size:0.95rem;
+}
+.save-btn { background:linear-gradient(90deg,#185a9d,#0f4a82); color:#fff; padding:10px 14px; border:none; border-radius:10px; cursor:pointer; width:160px; }
+
+/* responsive: collapse to single column for small screens */
+@media (max-width: 900px) {
+  .dashboard-grid { grid-template-columns: 1fr; }
+  .right-stack { order: 2; }        /* profile appears first, then right-stack */
+  .profile-widget { order: 1; }
+  .dashboard-widget { min-height: auto; }
+  .collapse-scroll { max-height: 360px; }
+  .dashboard-container { padding: 18px; margin: 10px; }
+}
