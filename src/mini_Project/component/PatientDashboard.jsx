@@ -168,14 +168,13 @@ const PatientDashboard = () => {
           </button>
         </div>
       </header>
-
-      {/* REVIEWS PANEL */}
-      {showReviews && (
-        <div className="pd-box">
-          <h3>Your Reviews</h3>
-          <PatientReviewPanel />
-        </div>
-      )}
+           {/*Review Panel*/}
+             {showReviews && (
+             <div className="pd-box">
+             <h3>Your Reviews</h3>
+             <PatientReviewPanel />
+             </div>
+            )}
 
       {/* MAIN */}
       <div className="pd-container">
@@ -233,9 +232,24 @@ const PatientDashboard = () => {
 
           <div className="pd-box">
             <h3>Appointments</h3>
+
             <p><b>Total:</b> {appointments.length}</p>
             <p><b>Upcoming:</b> {upcoming.length}</p>
             <p><b>Completed:</b> {completed.length}</p>
+
+            <button
+               className="book-btn"
+               style={{ marginTop: "12px", width: "100%" }}
+               disabled={!isProfileComplete}
+               onClick={() => navigate("/homepage")}
+               >FIND DOCTOR & BOOK APPOINTMENT
+            </button>
+
+             {!isProfileComplete && (
+               <p className="warning" style={{ marginTop: "8px" }}>
+                 ⚠ Please save your profile before booking
+               </p>
+              )}
           </div>
 
           {upcoming.length > 0 && (
@@ -267,19 +281,7 @@ const PatientDashboard = () => {
         </div>
       </div>
 
-      {/* BOOK */}
-      <div className="pd-book-box">
-        <button
-          className="book-btn"
-          disabled={!isProfileComplete}
-          onClick={() => navigate("/homepage")}
-        >
-          FIND A DOCTOR <br /> AND BOOK APPOINTMENT
-        </button>
-        {!isProfileComplete && (
-          <p className="warning">⚠ Please save your profile before booking</p>
-        )}
-      </div>
+
 
     </div>
   );

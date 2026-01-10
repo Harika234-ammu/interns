@@ -80,7 +80,6 @@ router.get("/profile/:doctorId", (req, res) => {
       d.specialization,
       d.qualification,
       d.hospital,
-      d.contact,
       d.fee,
       d.experience_years,
       d.bio,
@@ -103,7 +102,7 @@ router.get("/profile/:doctorId", (req, res) => {
 router.put("/profile/:doctorId", (req, res) => {
   const { hospital, contact, fee, experience, bio, timings } = req.body;
 
-  if (!hospital || !contact || !fee || !experience || !bio || !timings) {
+  if (!hospital || !fee || !experience || !bio || !timings) {
     return res.status(400).json({ message: "All fields are required" });
   }
 
@@ -113,7 +112,7 @@ router.put("/profile/:doctorId", (req, res) => {
     SET hospital=?, contact=?, fee=?, experience_years=?, bio=?, timings=?
     WHERE id=?
     `,
-    [hospital, contact, fee, experience, bio, timings, req.params.doctorId],
+    [hospital, fee, experience, bio, timings, req.params.doctorId],
     (err) => {
       if (err) return res.status(500).json({ message: "Update failed" });
       res.json({ message: "Profile updated successfully" });
@@ -130,7 +129,6 @@ router.get("/approved/:specialty", (req, res) => {
       d.specialization,
       d.qualification,
       d.hospital,
-      d.contact,
       d.fee,
       d.experience_years,
       d.bio,
@@ -151,20 +149,120 @@ router.get("/approved/:specialty", (req, res) => {
 
 /* ================= DOCTOR APPOINTMENTS ================= */
 router.get("/appointments/:doctorId", (req, res) => {
+  const safeParse = (value) => {
+    try {
+      return JSON.parse(value);
+    } catch {
+      return value;
+    }
+  };
+
   db.query(
     `
-    SELECT a.id, a.appointment_time, a.status,
-           p.fullname AS patientName,
-           a.patient_symptoms_notes, a.doctor_notes
+    SELECT 
+      a.id,
+      a.appointment_time,
+      a.status,
+      a.patient_symptoms_notes,
+      p.fullname AS patientName,
+      pp.age,
+      pp.gender,
+      pp.allergies
     FROM appointments a
-    JOIN Patientdb p ON a.patient_id=p.id
-    WHERE a.doctor_id=?
+    JOIN Patientdb p ON a.patient_id = p.id
+    LEFT JOIN patient_profile pp ON pp.patient_id = p.id
+    WHERE a.doctor_id = ?
     ORDER BY a.appointment_time ASC
     `,
     [req.params.doctorId],
     (err, rows) => {
       if (err) return res.status(500).json([]);
-      res.json(rows);
+
+      res.json(
+        rows.map((r) => ({
+          id: r.id,
+          patientName: r.patientName,
+          age: r.age,
+          gender: r.gender,
+          allergies: r.allergies,
+          date: r.appointment_time,
+          status: r.status,
+          symptoms: r.patient_symptoms_notes
+            ? safeParse(r.patient_symptoms_notes)
+            : [],
+        }))
+      );
+    }
+  );
+});
+
+
+
+/* ================= COMPLETE APPOINTMENT ================= */
+router.post("/appointments/:id/complete", upload.single("file"), (req, res) => {
+  const appointmentId = req.params.id;
+  const { doctorNotes, prescriptionDetails } = req.body;
+  const fileUrl = req.file ? `/uploads/${req.file.filename}` : null;
+
+  // Get appointment time & patient id
+  db.query(
+    "SELECT appointment_time, patient_id FROM appointments WHERE id=?",
+    [appointmentId],
+    (err, rows) => {
+      if (err || !rows.length) {
+        return res.status(404).json({ message: "Appointment not found" });
+      }
+
+      // Block early completion
+      if (new Date(rows[0].appointment_time) > new Date()) {
+        return res
+          .status(400)
+          .json({ message: "Cannot complete appointment before appointment time" });
+      }
+
+      const patientId = rows[0].patient_id;
+
+      //  Mark appointment completed
+      db.query(
+        `
+        UPDATE appointments
+        SET status='Completed', doctor_notes=?
+        WHERE id=?
+        `,
+        [doctorNotes, appointmentId],
+        (err) => {
+          if (err) {
+            return res.status(500).json({ message: "Failed to update appointment" });
+          }
+
+          // Save prescription (patient side)
+          db.query(
+            `
+            INSERT INTO prescriptions
+            (appointment_id, prescription_details, file_url)
+            VALUES (?,?,?)
+            `,
+            [appointmentId, prescriptionDetails, fileUrl],
+            (err) => {
+              if (err) {
+                return res.status(500).json({ message: "Failed to save prescription" });
+              }
+
+              //  Notify patient
+              db.query(
+                `
+                INSERT INTO notifications (user_id, message, type)
+                VALUES (?, 'Your prescription is available', 'PRESCRIPTION')
+                `,
+                [patientId],
+                () => {
+                  res.json({ message: "Appointment completed successfully" });
+                }
+              );
+            }
+          );
+        }
+      );
     }
   );
 });
