@@ -1,6 +1,8 @@
 import React, { useState } from "react";
 import { useParams, useLocation, useNavigate } from "react-router-dom";
 import "./DoctorDetailPage.css";
+import Reviews from "../component/Reviews";
+
 
 export default function DoctorDetailPage() {
   const { id } = useParams();
@@ -47,9 +49,7 @@ export default function DoctorDetailPage() {
         </div>
       ) : (
         <div className="review-box">
-          <h2>Patient Reviews</h2>
-          <p>No reviews yet.</p>
-
+          <Reviews doctorId={doctor.id} token={localStorage.getItem("token")} />
           <button className="back-btn" onClick={() => setShowReviews(false)}>
             Back
           </button>

@@ -3,6 +3,7 @@ import axios from "axios";
 import Swal from "sweetalert2";
 import { useNavigate } from "react-router-dom";
 import "../styles/PatientDash.css";
+import PatientReviewPanel from "./PatientReviewPanel";
 
 const PatientDashboard = () => {
   const navigate = useNavigate();
@@ -20,6 +21,7 @@ const PatientDashboard = () => {
 
   const [appointments, setAppointments] = useState([]);
   const [isProfileComplete, setIsProfileComplete] = useState(false);
+  const [showReviews, setShowReviews] = useState(false);
 
   /* ================= LOAD DATA ================= */
   useEffect(() => {
@@ -33,7 +35,6 @@ const PatientDashboard = () => {
 
     const headers = { Authorization: `Bearer ${token}` };
 
-    // Load profile
     axios.get("http://localhost:5000/patient/profile", { headers })
       .then(res => {
         setProfile(p => ({
@@ -52,34 +53,36 @@ const PatientDashboard = () => {
         setIsProfileComplete(Boolean(complete));
       });
 
-    // Load appointments
     axios.get("http://localhost:5000/patient/appointments", { headers })
       .then(res => {
-        const formatted = (res.data || []).map(a => ({
-          doctorName: a.doctor_name || "Doctor",
-          date: a.appointment_time,
-          time: new Date(a.appointment_time).toLocaleTimeString([], {
-            hour: "2-digit",
-            minute: "2-digit"
-          }),
-          status: a.status
-        }));
+        const formatted = (res.data || []).map(a => {
+          const dt = a.appointment_time ? new Date(a.appointment_time) : null;
+          return {
+            doctorName: a.doctor_name,
+            date: dt,
+            time: dt,
+            status: a.status
+          };
+        });
         setAppointments(formatted);
       });
   }, [navigate]);
 
+  /* ================= HELPERS ================= */
+  const formatDate = d => d ? d.toLocaleDateString() : "N/A";
+  const formatTime = t =>
+    t ? t.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }) : "N/A";
+
   /* ================= SAVE PROFILE ================= */
   const saveProfile = async () => {
     const token = localStorage.getItem("token");
-
     try {
       await axios.post(
         "http://localhost:5000/patient/profile",
         profile,
         { headers: { Authorization: `Bearer ${token}` } }
       );
-
-      Swal.fire("Success", "Profile saved successfully", "success");
+      Swal.fire("Saved", "Profile saved successfully", "success");
       setIsProfileComplete(true);
     } catch {
       Swal.fire("Error", "Failed to save profile", "error");
@@ -87,33 +90,13 @@ const PatientDashboard = () => {
   };
 
   /* ================= IMAGE UPLOAD ================= */
-  const handleImageUpload = (e) => {
+  const handleImageUpload = e => {
     const file = e.target.files[0];
     if (!file) return;
 
     const reader = new FileReader();
-    reader.onloadend = () => {
-      setProfile({ ...profile, photo: reader.result });
-    };
+    reader.onloadend = () => setProfile({ ...profile, photo: reader.result });
     reader.readAsDataURL(file);
-  };
-
-  /* ================= SWEETALERT POPUPS ================= */
-  const showInfo = (title, text) => {
-    Swal.fire({ title, text, icon: "info" });
-  };
-
-  const giveReview = (appointment) => {
-    Swal.fire({
-      title: `Review for Dr. ${appointment.doctorName}`,
-      input: "textarea",
-      inputLabel: "Your review",
-      showCancelButton: true
-    }).then(result => {
-      if (result.isConfirmed) {
-        Swal.fire("Thank you!", "Review submitted", "success");
-      }
-    });
   };
 
   /* ================= FILTER ================= */
@@ -124,6 +107,37 @@ const PatientDashboard = () => {
     profile.photo ||
     `https://ui-avatars.com/api/?name=${profile.name || "User"}&background=0D8ABC&color=fff`;
 
+  /* ================= PRESCRIPTIONS ================= */
+  const showPrescriptions = async () => {
+    const token = localStorage.getItem("token");
+    try {
+      const res = await axios.get(
+        "http://localhost:5000/patient/prescriptions",
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+
+      if (!res.data.length) {
+        Swal.fire("Prescriptions", "No prescriptions yet", "info");
+        return;
+      }
+
+      Swal.fire({
+        title: "Your Prescriptions",
+        width: 650,
+        html: res.data.map(p => `
+          <div style="text-align:left;margin-bottom:12px">
+            <p><b>Doctor:</b> ${p.doctorName}</p>
+            <p><b>Prescription:</b><br/>${p.prescription_details}</p>
+            <small>${new Date(p.created_at).toLocaleString()}</small>
+            <hr/>
+          </div>
+        `).join("")
+      });
+    } catch {
+      Swal.fire("Error", "Failed to load prescriptions", "error");
+    }
+  };
+
   /* ================= UI ================= */
   return (
     <div className="pd-page">
@@ -132,33 +146,42 @@ const PatientDashboard = () => {
       <header className="pd-navbar">
         <h2>PATIENT PROFILE</h2>
         <div className="pd-nav-actions">
-          <button onClick={() => showInfo("Notifications", "No new notifications")}>
+          <button onClick={() =>
+            Swal.fire("Notifications", "No new notifications", "info")
+          }>
             Notifications
           </button>
-          <button onClick={() => showInfo("Prescriptions", "No prescriptions yet")}>
+
+          <button onClick={showPrescriptions}>
             Prescriptions
           </button>
-          <button onClick={() => showInfo("Reviews", "You can review completed appointments")}>
+
+          <button onClick={() => setShowReviews(!showReviews)}>
             Reviews
           </button>
-          <button
-            className="logout"
-            onClick={() => {
-              localStorage.clear();
-              navigate("/login");
-            }}
-          >
+
+          <button className="logout" onClick={() => {
+            localStorage.clear();
+            navigate("/login");
+          }}>
             Sign Out
           </button>
         </div>
       </header>
 
+      {/* REVIEWS PANEL */}
+      {showReviews && (
+        <div className="pd-box">
+          <h3>Your Reviews</h3>
+          <PatientReviewPanel />
+        </div>
+      )}
+
       {/* MAIN */}
       <div className="pd-container">
 
-        {/* LEFT BOX */}
+        {/* LEFT */}
         <div className="pd-box pd-details">
-
           <div className="profile-avatar">
             <img src={avatar} alt="avatar" />
             <input type="file" onChange={handleImageUpload} />
@@ -168,21 +191,15 @@ const PatientDashboard = () => {
           <input value={profile.name} disabled />
 
           <label>Age</label>
-          <select
-            value={profile.age}
-            onChange={e => setProfile({ ...profile, age: e.target.value })}
-          >
+          <select value={profile.age} onChange={e => setProfile({ ...profile, age: e.target.value })}>
             <option value="">Select Age</option>
-            {Array.from({ length: 83 }, (_, i) => i + 18).map(age => (
-              <option key={age} value={age}>{age}</option>
+            {Array.from({ length: 83 }, (_, i) => i + 18).map(a => (
+              <option key={a}>{a}</option>
             ))}
           </select>
 
           <label>Gender</label>
-          <select
-            value={profile.gender}
-            onChange={e => setProfile({ ...profile, gender: e.target.value })}
-          >
+          <select value={profile.gender} onChange={e => setProfile({ ...profile, gender: e.target.value })}>
             <option value="">Select</option>
             <option>Male</option>
             <option>Female</option>
@@ -190,22 +207,13 @@ const PatientDashboard = () => {
           </select>
 
           <label>Allergies</label>
-          <input
-            value={profile.allergies}
-            onChange={e => setProfile({ ...profile, allergies: e.target.value })}
-          />
+          <input value={profile.allergies} onChange={e => setProfile({ ...profile, allergies: e.target.value })} />
 
           <label>Medical History</label>
-          <input
-            value={profile.medical_history}
-            onChange={e => setProfile({ ...profile, medical_history: e.target.value })}
-          />
+          <input value={profile.medical_history} onChange={e => setProfile({ ...profile, medical_history: e.target.value })} />
 
           <label>Medications</label>
-          <input
-            value={profile.ongoing_medications}
-            onChange={e => setProfile({ ...profile, ongoing_medications: e.target.value })}
-          />
+          <input value={profile.ongoing_medications} onChange={e => setProfile({ ...profile, ongoing_medications: e.target.value })} />
 
           {!isProfileComplete && (
             <button className="save-btn" onClick={saveProfile}>
@@ -214,8 +222,9 @@ const PatientDashboard = () => {
           )}
         </div>
 
-        {/* RIGHT BOX */}
+        {/* RIGHT */}
         <div className="pd-side">
+
           <div className="pd-box">
             <h3>Health Overview</h3>
             <p><b>Allergies:</b> {profile.allergies || "None"}</p>
@@ -228,29 +237,37 @@ const PatientDashboard = () => {
             <p><b>Upcoming:</b> {upcoming.length}</p>
             <p><b>Completed:</b> {completed.length}</p>
           </div>
+
+          {upcoming.length > 0 && (
+            <div className="pd-box">
+              <h3>Upcoming Appointments</h3>
+              {upcoming.map((a, i) => (
+                <div key={i} className="appointment-row">
+                  <p><b>Doctor:</b> {a.doctorName}</p>
+                  <p><b>Date:</b> {formatDate(a.date)}</p>
+                  <p><b>Time:</b> {formatTime(a.time)}</p>
+                </div>
+              ))}
+            </div>
+          )}
+
+          {completed.length > 0 && (
+            <div className="pd-box">
+              <h3>Completed Appointments</h3>
+              {completed.map((a, i) => (
+                <div key={i} className="appointment-row">
+                  <p><b>Doctor:</b> {a.doctorName}</p>
+                  <p><b>Date:</b> {formatDate(a.date)}</p>
+                  <p><b>Time:</b> {formatTime(a.time)}</p>
+                </div>
+              ))}
+            </div>
+          )}
+
         </div>
       </div>
 
-      {/* APPOINTMENT DETAILS */}
-      <div className="pd-box">
-        <h3>Appointment Details</h3>
-
-        {appointments.length === 0 && <p>No appointments found</p>}
-
-        {appointments.map((a, i) => (
-          <div key={i} className="appointment-row">
-            <p><b>Doctor:</b> {a.doctorName}</p>
-            <p><b>Date:</b> {new Date(a.date).toLocaleDateString()}</p>
-            <p><b>Time:</b> {a.time}</p>
-
-            {a.status === "Completed" && (
-              <button onClick={() => giveReview(a)}>Give Review</button>
-            )}
-          </div>
-        ))}
-      </div>
-
-      {/* BOOK BUTTON */}
+      {/* BOOK */}
       <div className="pd-book-box">
         <button
           className="book-btn"
@@ -259,11 +276,11 @@ const PatientDashboard = () => {
         >
           FIND A DOCTOR <br /> AND BOOK APPOINTMENT
         </button>
-
         {!isProfileComplete && (
           <p className="warning">⚠ Please save your profile before booking</p>
         )}
       </div>
+
     </div>
   );
 };

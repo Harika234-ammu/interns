@@ -73,13 +73,24 @@ CREATE TABLE appointments (
 
 -- ============= PRESCRIPTIONS ============
 CREATE TABLE prescriptions (
-    id INT PRIMARY KEY AUTO_INCREMENT,
+    id INT AUTO_INCREMENT PRIMARY KEY,
+
     appointment_id INT NOT NULL UNIQUE,
-    prescription_details TEXT NOT NULL,
+    doctor_id INT NOT NULL,
+    patient_id INT NOT NULL,
+
+    medicines TEXT NOT NULL,
+    instructions TEXT,
+
     file_url VARCHAR(255),
+
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    FOREIGN KEY (appointment_id) REFERENCES appointments(id)
+
+    FOREIGN KEY (appointment_id) REFERENCES appointments(id) ON DELETE CASCADE,
+    FOREIGN KEY (doctor_id) REFERENCES doctorsdb(id),
+    FOREIGN KEY (patient_id) REFERENCES patientdb(id)
 );
+
 
 -- ============= REVIEWS ============
 CREATE TABLE reviews (

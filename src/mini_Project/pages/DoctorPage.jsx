@@ -25,7 +25,7 @@ export default function DoctorPage() {
 
               <p><strong>Specialty:</strong> {doc.specialization}</p>
               <p><strong>Fee:</strong> ₹{doc.fee}</p>
-              <p><strong>Rating:</strong> ⭐ {doc.rating}</p>
+              <p><strong>Rating:</strong> ⭐ {doc.rating ?? "0.0" } / 5</p>
 
               <p>
                 <strong>Hospital:</strong>{" "}
