@@ -217,6 +217,29 @@ router.get("/prescriptions", verifyToken, (req, res) => {
   });
 });
 
+// ================= CANCEL APPOINTMENT =================
+router.put("/appointments/cancel/:id", verifyToken, (req, res) => {
+  const { reason } = req.body;
+  const appointmentId = req.params.id;
+
+  if (!reason) {
+    return res.status(400).json({ message: "Cancel reason required" });
+  }
+
+  db.query(
+    `
+    UPDATE appointments
+    SET status='Cancelled', cancel_reason=?
+    WHERE id=? AND patient_id=?
+    `,
+    [reason, appointmentId, req.userId],
+    (err, result) => {
+      if (err) return res.status(500).json({ message: "Cancel failed" });
+      res.json({ message: "Appointment cancelled" });
+    }
+  );
+});
+
 
 
 /* ================= GET PATIENT REVIEWS ================= */

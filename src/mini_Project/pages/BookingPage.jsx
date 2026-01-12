@@ -2,6 +2,7 @@ import React, { useState, useEffect } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import axios from "axios";
 import { jwtDecode } from "jwt-decode";
+import Swal from "sweetalert2";
 import "./BookingPage.css";
 
 export default function BookingPage() {
@@ -11,9 +12,8 @@ export default function BookingPage() {
 
   const [selectedDate, setSelectedDate] = useState("");
   const [selectedTime, setSelectedTime] = useState("");
-  const [bookedSlots, setBookedSlots] = useState([]);
-  const [availableSlots, setAvailableSlots] = useState([]);
   const [timings, setTimings] = useState("");
+  const [availableSlots, setAvailableSlots] = useState([]);
 
   /* ================= SAFETY ================= */
   useEffect(() => {
@@ -23,17 +23,21 @@ export default function BookingPage() {
   /* ================= FETCH DOCTOR TIMINGS ================= */
   useEffect(() => {
     const fetchDoctor = async () => {
-      const res = await axios.get(
-        `http://localhost:5000/doctor/profile/${doctor.id}`
-      );
-      setTimings(res.data.timings);
+      try {
+        const res = await axios.get(
+          `http://localhost:5000/doctor/profile/${doctor.id}`
+        );
+        setTimings(res.data.timings || "");
+      } catch {
+        setTimings("");
+      }
     };
     fetchDoctor();
   }, [doctor]);
 
   /* ================= SLOT HELPERS ================= */
   const parseTimings = (timings) => {
-    // "09:00 am to 05:00 pm"
+    // Example: "10:00 am to 03:00 pm"
     const [startRaw, endRaw] = timings.toLowerCase().split("to");
 
     const to24 = (t) => {
@@ -68,24 +72,35 @@ export default function BookingPage() {
     return slots;
   };
 
-  /* ================= FETCH BOOKED SLOTS ================= */
+  /* ================= FETCH SLOTS ================= */
   useEffect(() => {
-    if (!selectedDate || !timings) return;
+    if (!selectedDate || !timings) {
+      setAvailableSlots([]);
+      return;
+    }
 
     const fetchSlots = async () => {
-      const token = localStorage.getItem("token");
+      try {
+        const token = localStorage.getItem("token");
 
-      const res = await axios.get(
-        `http://localhost:5000/patient/doctor-slots/${doctor.id}/${selectedDate}`,
-        { headers: { Authorization: `Bearer ${token}` } }
-      );
+        const res = await axios.get(
+          `http://localhost:5000/patient/doctor-slots/${doctor.id}/${selectedDate}`,
+          { headers: { Authorization: `Bearer ${token}` } }
+        );
 
-      const booked = (res.data || []).map(t => t.slice(0, 5));
-      setBookedSlots(booked);
+        const bookedTimes = (res.data || []).map(t => t.slice(0, 5));
+        const { start, end } = parseTimings(timings);
+        const allSlots = generateSlots(start, end);
 
-      const { start, end } = parseTimings(timings);
-      const allSlots = generateSlots(start, end);
-      setAvailableSlots(allSlots.filter(s => !booked.includes(s)));
+        const slotsWithStatus = allSlots.map(time => ({
+          time,
+          booked: bookedTimes.includes(time)
+        }));
+
+        setAvailableSlots(slotsWithStatus);
+      } catch {
+        setAvailableSlots([]);
+      }
     };
 
     fetchSlots();
@@ -94,7 +109,7 @@ export default function BookingPage() {
   /* ================= BOOK ================= */
   const handleBooking = async () => {
     if (!selectedDate || !selectedTime) {
-      alert("Please select date & time");
+      Swal.fire("Missing Data", "Please select date and time", "warning");
       return;
     }
 
@@ -113,11 +128,15 @@ export default function BookingPage() {
         { headers: { Authorization: `Bearer ${token}` } }
       );
 
-      navigate("/confirmation", {
-        state: { doctor, date: selectedDate, time: selectedTime }
-      });
+      Swal.fire("Success", "Appointment booked successfully", "success")
+        .then(() => {
+          navigate("/confirmation", {
+            state: { doctor, date: selectedDate, time: selectedTime }
+          });
+        });
+
     } catch {
-      alert("❌ Slot not available");
+      Swal.fire("Error", "Selected slot is already booked", "error");
     }
   };
 
@@ -131,26 +150,46 @@ export default function BookingPage() {
         <p><b>Specialty:</b> {doctor.specialization}</p>
       </div>
 
-      <label>Select Date</label>
+      <h4>Step 1: Choose Appointment Date</h4>
       <input
         type="date"
         min={new Date().toISOString().split("T")[0]}
         value={selectedDate}
-        onChange={(e) => setSelectedDate(e.target.value)}
+        onChange={(e) => {
+          setSelectedDate(e.target.value);
+          setSelectedTime("");
+        }}
       />
 
-      <label>Select Time</label>
+      <h4>Step 2: Choose Time Slot</h4>
 
-      {availableSlots.length === 0 && selectedDate ? (
-        <p className="warning">❌ No slots available</p>
-      ) : (
-        <select value={selectedTime} onChange={(e) => setSelectedTime(e.target.value)}>
+      {!timings && selectedDate && (
+        <p className="warning">❌ Doctor not available</p>
+      )}
+
+      {timings && availableSlots.length > 0 && (
+        <select
+          value={selectedTime}
+          onChange={(e) => setSelectedTime(e.target.value)}
+        >
           <option value="">Select time</option>
-          {availableSlots.map(t => (
-            <option key={t} value={t}>{t}</option>
+          {availableSlots.map(slot => (
+            <option
+              key={slot.time}
+              value={slot.time}
+              disabled={slot.booked}
+            >
+              {slot.time} {slot.booked ? "(Booked)" : ""}
+            </option>
           ))}
         </select>
       )}
+
+      {timings &&
+        availableSlots.length > 0 &&
+        availableSlots.every(s => s.booked) && (
+          <p className="warning">ℹ️ All slots are booked for this date</p>
+        )}
 
       <button className="proceed-btn" onClick={handleBooking}>
         Confirm Appointment

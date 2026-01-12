@@ -1,67 +1,84 @@
-import React, { useEffect, useState, useCallback } from "react";
+import React, { useEffect, useState } from "react";
 import axios from "axios";
+import Swal from "sweetalert2";
 
-const Notifications = ({ doctorId, token }) => {
+const Notifications = ({ doctorId, token, setNotificationCount }) => {
   const [notifications, setNotifications] = useState([]);
-  const [open, setOpen] = useState(false);
 
-  const fetchNotifications = useCallback(async () => {
-    if (!doctorId) return;
-    try {
-      const res = await axios.get(
-        `http://localhost:5000/doctor/notifications/${doctorId}`,
-        { headers: { Authorization: `Bearer ${token}` } }
-      );
-      setNotifications(res.data || []);
-    } catch (err) {
-      console.error("Error fetching notifications:", err);
-    }
-  }, [doctorId, token]);
-
+  /* ================= FETCH NOTIFICATIONS ================= */
   useEffect(() => {
-    fetchNotifications();
-  }, [fetchNotifications]);
+    if (!doctorId) return;
 
-  const toggle = () => setOpen((s) => !s);
+    axios
+      .get(`http://localhost:5000/doctor/notifications/${doctorId}`, {
+        headers: {
+          Authorization: `Bearer ${token}`
+        }
+      })
+      .then(res => {
+        setNotifications(res.data);
 
+        // 🔴 set unread count for avatar badge
+        const unread = res.data.filter(n => !n.is_read).length;
+        setNotificationCount(unread);
+      })
+      .catch(err => {
+        console.error("Error fetching notifications", err);
+      });
+  }, [doctorId, token, setNotificationCount]);
+
+  /* ================= MARK AS READ ================= */
+  const markAsRead = (id) => {
+    axios
+      .put(`http://localhost:5000/doctor/notifications/read/${id}`)
+      .then(() => {
+        const updated = notifications.map(n =>
+          n.id === id ? { ...n, is_read: true } : n
+        );
+
+        setNotifications(updated);
+
+        // 🔴 update badge count
+        const unread = updated.filter(n => !n.is_read).length;
+        setNotificationCount(unread);
+      })
+      .catch(err => {
+        console.error("Error marking notification as read", err);
+      });
+  };
+
+  /* ================= EMPTY STATE ================= */
+  if (!notifications.length) {
+    return <p style={{ color: "#64748b" }}>No notifications</p>;
+  }
+
+  /* ================= UI ================= */
   return (
-    <div className="collapse" aria-live="polite">
-      <div
-        className="collapse-header"
-        onClick={toggle}
-        role="button"
-        tabIndex={0}
-        onKeyDown={(e) => e.key === "Enter" && toggle()}
-        aria-expanded={open}
-        aria-controls="notifications-collapse"
-      >
-        <div className="title">
-          <span>🔔 Notifications</span>
-          <span className="meta">({notifications.length})</span>
+    <div>
+      {notifications.map(n => (
+        <div
+          key={n.id}
+          style={{
+            padding: "10px",
+            marginBottom: "8px",
+            borderRadius: "8px",
+            background: n.is_read ? "#f8fafc" : "#e0f2fe",
+            cursor: "pointer",
+            border: "1px solid #e2e8f0"
+          }}
+          onClick={() => {
+            Swal.fire("Notification", n.message, "info");
+            if (!n.is_read) markAsRead(n.id);
+          }}
+        >
+          <p style={{ margin: 0, fontWeight: n.is_read ? "normal" : "bold" }}>
+            {n.message}
+          </p>
+          <small style={{ color: "#64748b" }}>
+            {new Date(n.created_at).toLocaleString()}
+          </small>
         </div>
-        <div className="meta">
-          <svg className={`caret ${open ? "open" : ""}`} viewBox="0 0 24 24" fill="none" stroke="currentColor">
-            <path d="M6 9l6 6 6-6" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-          </svg>
-        </div>
-      </div>
-
-      <div id="notifications-collapse" className={`collapse-content ${open ? "expanded" : ""}`}>
-        <div className="collapse-scroll widget-body">
-          {notifications.length === 0 ? (
-            <p>No notifications</p>
-          ) : (
-            <ul style={{ listStyle: "none", padding: 0 }}>
-              {notifications.map((n) => (
-                <li key={n.id ?? n._id} className="list-item">
-                  <div>{n.message}</div>
-                  <small>{new Date(n.created_at).toLocaleString()}</small>
-                </li>
-              ))}
-            </ul>
-          )}
-        </div>
-      </div>
+      ))}
     </div>
   );
 };

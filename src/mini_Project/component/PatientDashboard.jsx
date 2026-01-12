@@ -24,6 +24,29 @@ const PatientDashboard = () => {
   const [showReviews, setShowReviews] = useState(false);
 
   /* ================= LOAD DATA ================= */
+  const fetchAppointments = async () => {
+    const token = localStorage.getItem("token");
+    const headers = { Authorization: `Bearer ${token}` };
+
+    const res = await axios.get(
+      "http://localhost:5000/patient/appointments",
+      { headers }
+    );
+
+    const formatted = (res.data || []).map(a => {
+      const dt = a.appointment_time ? new Date(a.appointment_time) : null;
+      return {
+        appointment_id: a.appointment_id,
+        doctorName: a.doctor_name,
+        date: dt,
+        time: dt,
+        status: a.status
+      };
+    });
+
+    setAppointments(formatted);
+  };
+
   useEffect(() => {
     const token = localStorage.getItem("token");
     const fullname = localStorage.getItem("fullname");
@@ -53,19 +76,7 @@ const PatientDashboard = () => {
         setIsProfileComplete(Boolean(complete));
       });
 
-    axios.get("http://localhost:5000/patient/appointments", { headers })
-      .then(res => {
-        const formatted = (res.data || []).map(a => {
-          const dt = a.appointment_time ? new Date(a.appointment_time) : null;
-          return {
-            doctorName: a.doctor_name,
-            date: dt,
-            time: dt,
-            status: a.status
-          };
-        });
-        setAppointments(formatted);
-      });
+    fetchAppointments();
   }, [navigate]);
 
   /* ================= HELPERS ================= */
@@ -97,6 +108,45 @@ const PatientDashboard = () => {
     const reader = new FileReader();
     reader.onloadend = () => setProfile({ ...profile, photo: reader.result });
     reader.readAsDataURL(file);
+  };
+
+  /* ================= CANCEL APPOINTMENT ================= */
+  const cancelAppointment = async (appointmentId) => {
+    const { value: reason } = await Swal.fire({
+      title: "Cancel Appointment",
+      input: "select",
+      inputOptions: {
+        emergency: "Emergency",
+        busy: "Busy / Not Available",
+        reschedule: "Want to reschedule",
+        not_well: "Not feeling well",
+        other: "Other"
+      },
+      inputPlaceholder: "Select reason",
+      showCancelButton: true,
+      confirmButtonText: "Cancel Appointment",
+      confirmButtonColor: "#d33",
+      inputValidator: value => {
+        if (!value) return "Please select a reason";
+      }
+    });
+
+    if (!reason) return;
+
+    try {
+      const token = localStorage.getItem("token");
+
+      await axios.put(
+        `http://localhost:5000/patient/appointments/cancel/${appointmentId}`,
+        { reason },
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+
+      Swal.fire("Cancelled", "Appointment cancelled successfully", "success");
+      fetchAppointments();
+    } catch {
+      Swal.fire("Error", "Failed to cancel appointment", "error");
+    }
   };
 
   /* ================= FILTER ================= */
@@ -146,20 +196,11 @@ const PatientDashboard = () => {
       <header className="pd-navbar">
         <h2>PATIENT PROFILE</h2>
         <div className="pd-nav-actions">
-          <button onClick={() =>
-            Swal.fire("Notifications", "No new notifications", "info")
-          }>
+          <button onClick={() => Swal.fire("Notifications", "No new notifications", "info")}>
             Notifications
           </button>
-
-          <button onClick={showPrescriptions}>
-            Prescriptions
-          </button>
-
-          <button onClick={() => setShowReviews(!showReviews)}>
-            Reviews
-          </button>
-
+          <button onClick={showPrescriptions}>Prescriptions</button>
+          <button onClick={() => setShowReviews(!showReviews)}>Reviews</button>
           <button className="logout" onClick={() => {
             localStorage.clear();
             navigate("/login");
@@ -169,7 +210,7 @@ const PatientDashboard = () => {
         </div>
       </header>
 
-      {/* REVIEWS PANEL */}
+      {/* REVIEWS */}
       {showReviews && (
         <div className="pd-box">
           <h3>Your Reviews</h3>
@@ -226,12 +267,6 @@ const PatientDashboard = () => {
         <div className="pd-side">
 
           <div className="pd-box">
-            <h3>Health Overview</h3>
-            <p><b>Allergies:</b> {profile.allergies || "None"}</p>
-            <p><b>Medications:</b> {profile.ongoing_medications || "None"}</p>
-          </div>
-
-          <div className="pd-box">
             <h3>Appointments</h3>
             <p><b>Total:</b> {appointments.length}</p>
             <p><b>Upcoming:</b> {upcoming.length}</p>
@@ -241,11 +276,17 @@ const PatientDashboard = () => {
           {upcoming.length > 0 && (
             <div className="pd-box">
               <h3>Upcoming Appointments</h3>
-              {upcoming.map((a, i) => (
-                <div key={i} className="appointment-row">
+              {upcoming.map(a => (
+                <div key={a.appointment_id} className="appointment-row">
                   <p><b>Doctor:</b> {a.doctorName}</p>
                   <p><b>Date:</b> {formatDate(a.date)}</p>
                   <p><b>Time:</b> {formatTime(a.time)}</p>
+                  <button
+                    className="cancel-btn"
+                    onClick={() => cancelAppointment(a.appointment_id)}
+                  >
+                    Cancel Appointment
+                  </button>
                 </div>
               ))}
             </div>
@@ -254,8 +295,8 @@ const PatientDashboard = () => {
           {completed.length > 0 && (
             <div className="pd-box">
               <h3>Completed Appointments</h3>
-              {completed.map((a, i) => (
-                <div key={i} className="appointment-row">
+              {completed.map(a => (
+                <div key={a.appointment_id} className="appointment-row">
                   <p><b>Doctor:</b> {a.doctorName}</p>
                   <p><b>Date:</b> {formatDate(a.date)}</p>
                   <p><b>Time:</b> {formatTime(a.time)}</p>
@@ -271,14 +312,10 @@ const PatientDashboard = () => {
       <div className="pd-book-box">
         <button
           className="book-btn"
-          disabled={!isProfileComplete}
           onClick={() => navigate("/homepage")}
         >
           FIND A DOCTOR <br /> AND BOOK APPOINTMENT
         </button>
-        {!isProfileComplete && (
-          <p className="warning">⚠ Please save your profile before booking</p>
-        )}
       </div>
 
     </div>

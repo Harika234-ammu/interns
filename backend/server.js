@@ -10,6 +10,8 @@ import authRoutes from "./routes/auth.js";
 import loginRoutes from "./routes/login.js";
 import patientAppointments from "./routes/patientAppointments.js";
 import verifyRoutes from "./routes/verify.js";
+import "./utils/appointmentReminders.js";
+
 
 const app = express();
 

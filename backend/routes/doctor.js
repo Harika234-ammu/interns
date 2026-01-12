@@ -169,6 +169,48 @@ router.get("/appointments/:doctorId", (req, res) => {
   );
 });
 
+
+/* ================= DOCTOR NOTIFICATIONS ================= */
+router.get("/notifications/:doctorId", (req, res) => {
+  db.query(
+    `
+    SELECT id, message, is_read, created_at
+    FROM notifications
+    WHERE user_id = ?
+    ORDER BY created_at DESC
+    `,
+    [req.params.doctorId],
+    (err, rows) => {
+      if (err) return res.status(500).json([]);
+      res.json(rows);
+    }
+  );
+});
+
+/* ================= TEST NOTIFICATION (EASY) ================= */
+router.post("/notifications/test/:doctorId", (req, res) => {
+  const doctorId = req.params.doctorId;
+
+  const message = "🧪 Test Notification: You have an appointment reminder";
+
+  db.query(
+    "INSERT INTO notifications (user_id, message) VALUES (?, ?)",
+    [doctorId, message],
+    (err) => {
+      if (err) return res.status(500).json({ message: "Failed" });
+      res.json({ message: "Test notification added" });
+    }
+  );
+});
+/* ================= MARK NOTIFICATION AS READ ================= */
+router.put("/notifications/read/:id", (req, res) => {
+  db.query(
+    "UPDATE notifications SET is_read=true WHERE id=?",
+    [req.params.id],
+    () => res.json({ message: "Marked as read" })
+  );
+});
+
 /* ================= DOCTOR REVIEWS ================= */
 router.get("/reviews/:doctorId", (req, res) => {
   db.query(
