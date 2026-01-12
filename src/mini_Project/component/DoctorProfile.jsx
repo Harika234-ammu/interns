@@ -5,7 +5,6 @@ const DoctorProfile = ({ doctorId, token }) => {
   const [doctor, setDoctor] = useState(null);
   const [formData, setFormData] = useState({
     hospital: "",
-    contact: "",
     fee: "",
     experience: "",
     bio: "",
@@ -29,7 +28,6 @@ const DoctorProfile = ({ doctorId, token }) => {
 
         setFormData({
           hospital: res.data.hospital || "",
-          contact: res.data.contact || "",
           fee: res.data.fee || "",
           experience: res.data.experience_years || "",
           bio: res.data.bio || "",
@@ -51,9 +49,9 @@ const DoctorProfile = ({ doctorId, token }) => {
   };
 
   const handleSave = async () => {
-    const { hospital, contact, fee, experience, bio, timings } = formData;
+    const { hospital, fee, experience, bio, timings } = formData;
 
-    if (!hospital || !contact || !fee || !experience || !bio || !timings) {
+    if (!hospital || !fee || !experience || !bio || !timings) {
       alert("Please fill all required fields");
       return;
     }
@@ -96,16 +94,6 @@ const DoctorProfile = ({ doctorId, token }) => {
           />
         </label>
 
-        <label>
-          <strong>Contact Number * (10 digits)</strong>
-          <input
-            className="input"
-            name="contact"
-            placeholder="Enter contact number"
-            value={formData.contact}
-            onChange={handleChange}
-          />
-        </label>
 
         <label>
           <strong>Consultation Fee (₹) *</strong>

@@ -34,6 +34,11 @@ const Appointments = ({ doctorId, token }) => {
     return () => (mounted = false);
   }, [doctorId, token]);
 
+  const isPastAppointment = (time) => {
+    if (!time) return false;
+    return new Date(time) <= new Date();
+  };
+
   const completeAppointment = async (id) => {
     const body = new FormData();
     body.append("doctorNotes", doctorNotes);
@@ -122,22 +127,24 @@ const Appointments = ({ doctorId, token }) => {
                         </span>
                       </div>
                       {appt.status === "Scheduled" && (
-                        <button onClick={() => setSelectedAppointment(appt)}>Mark as Completed</button>
+                        <button
+                          onClick={() => setSelectedAppointment(appt)}
+                          disabled={!isPastAppointment(appt.date)}
+                          style={{
+                            opacity: isPastAppointment(appt.date) ? 1 : 0.5,
+                            cursor: isPastAppointment(appt.date) ? "pointer" : "not-allowed",
+                          }}
+                          title={
+                            isPastAppointment(appt.date)
+                              ? "Complete appointment"
+                              : "Cannot complete before appointment time"
+                          }
+                        >
+                          Mark as Completed
+                        </button>
                       )}
                     </div>
                   </div>
-
-                  {appt.status === "Completed" && (
-                    <div style={{ marginTop: 10 }}>
-                      <strong>Doctor Notes:</strong> {appt.doctorNotes || "-"}
-                      <br />
-                      <strong>Prescription:</strong> {appt.prescriptionDetails || "-"}
-                      <br />
-                      {appt.prescriptionFile && (
-                        <a href={appt.prescriptionFile} target="_blank" rel="noreferrer">Download Prescription</a>
-                      )}
-                    </div>
-                  )}
                 </li>
               ))}
             </ul>

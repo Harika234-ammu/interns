@@ -23,7 +23,7 @@ const PatientDashboard = () => {
   const [isProfileComplete, setIsProfileComplete] = useState(false);
   const [showReviews, setShowReviews] = useState(false);
 
-  /* ================= LOAD DATA ================= */
+  /* ================= LOAD APPOINTMENTS ================= */
   const fetchAppointments = async () => {
     const token = localStorage.getItem("token");
     const headers = { Authorization: `Bearer ${token}` };
@@ -47,6 +47,7 @@ const PatientDashboard = () => {
     setAppointments(formatted);
   };
 
+  /* ================= INITIAL LOAD ================= */
   useEffect(() => {
     const token = localStorage.getItem("token");
     const fullname = localStorage.getItem("fullname");
@@ -106,7 +107,8 @@ const PatientDashboard = () => {
     if (!file) return;
 
     const reader = new FileReader();
-    reader.onloadend = () => setProfile({ ...profile, photo: reader.result });
+    reader.onloadend = () =>
+      setProfile({ ...profile, photo: reader.result });
     reader.readAsDataURL(file);
   };
 
@@ -201,10 +203,13 @@ const PatientDashboard = () => {
           </button>
           <button onClick={showPrescriptions}>Prescriptions</button>
           <button onClick={() => setShowReviews(!showReviews)}>Reviews</button>
-          <button className="logout" onClick={() => {
-            localStorage.clear();
-            navigate("/login");
-          }}>
+          <button
+            className="logout"
+            onClick={() => {
+              localStorage.clear();
+              navigate("/login");
+            }}
+          >
             Sign Out
           </button>
         </div>
@@ -232,7 +237,10 @@ const PatientDashboard = () => {
           <input value={profile.name} disabled />
 
           <label>Age</label>
-          <select value={profile.age} onChange={e => setProfile({ ...profile, age: e.target.value })}>
+          <select
+            value={profile.age}
+            onChange={e => setProfile({ ...profile, age: e.target.value })}
+          >
             <option value="">Select Age</option>
             {Array.from({ length: 83 }, (_, i) => i + 18).map(a => (
               <option key={a}>{a}</option>
@@ -240,7 +248,10 @@ const PatientDashboard = () => {
           </select>
 
           <label>Gender</label>
-          <select value={profile.gender} onChange={e => setProfile({ ...profile, gender: e.target.value })}>
+          <select
+            value={profile.gender}
+            onChange={e => setProfile({ ...profile, gender: e.target.value })}
+          >
             <option value="">Select</option>
             <option>Male</option>
             <option>Female</option>
@@ -248,13 +259,22 @@ const PatientDashboard = () => {
           </select>
 
           <label>Allergies</label>
-          <input value={profile.allergies} onChange={e => setProfile({ ...profile, allergies: e.target.value })} />
+          <input
+            value={profile.allergies}
+            onChange={e => setProfile({ ...profile, allergies: e.target.value })}
+          />
 
           <label>Medical History</label>
-          <input value={profile.medical_history} onChange={e => setProfile({ ...profile, medical_history: e.target.value })} />
+          <input
+            value={profile.medical_history}
+            onChange={e => setProfile({ ...profile, medical_history: e.target.value })}
+          />
 
           <label>Medications</label>
-          <input value={profile.ongoing_medications} onChange={e => setProfile({ ...profile, ongoing_medications: e.target.value })} />
+          <input
+            value={profile.ongoing_medications}
+            onChange={e => setProfile({ ...profile, ongoing_medications: e.target.value })}
+          />
 
           {!isProfileComplete && (
             <button className="save-btn" onClick={saveProfile}>
@@ -271,6 +291,21 @@ const PatientDashboard = () => {
             <p><b>Total:</b> {appointments.length}</p>
             <p><b>Upcoming:</b> {upcoming.length}</p>
             <p><b>Completed:</b> {completed.length}</p>
+
+            <button
+              className="book-btn"
+              style={{ marginTop: "12px", width: "100%" }}
+              disabled={!isProfileComplete}
+              onClick={() => navigate("/homepage")}
+            >
+              FIND DOCTOR & BOOK APPOINTMENT
+            </button>
+
+            {!isProfileComplete && (
+              <p className="warning" style={{ marginTop: "8px" }}>
+                ⚠ Please save your profile before booking
+              </p>
+            )}
           </div>
 
           {upcoming.length > 0 && (
@@ -307,17 +342,6 @@ const PatientDashboard = () => {
 
         </div>
       </div>
-
-      {/* BOOK */}
-      <div className="pd-book-box">
-        <button
-          className="book-btn"
-          onClick={() => navigate("/homepage")}
-        >
-          FIND A DOCTOR <br /> AND BOOK APPOINTMENT
-        </button>
-      </div>
-
     </div>
   );
 };
