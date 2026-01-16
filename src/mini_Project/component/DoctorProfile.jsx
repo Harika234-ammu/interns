@@ -5,10 +5,12 @@ const DoctorProfile = ({ doctorId, token }) => {
   const [doctor, setDoctor] = useState(null);
   const [formData, setFormData] = useState({
     hospital: "",
+    contact: "",     // ✅ ADDED
     fee: "",
     experience: "",
     bio: "",
-    timings: "",
+    start_time: "",
+    end_time: ""
   });
 
   const [loading, setLoading] = useState(true);
@@ -17,45 +19,30 @@ const DoctorProfile = ({ doctorId, token }) => {
   useEffect(() => {
     if (!doctorId) return;
 
-    const fetchProfile = async () => {
-      try {
-        const res = await axios.get(
-          `http://localhost:5000/doctor/profile/${doctorId}`,
-          { headers: { Authorization: `Bearer ${token}` } }
-        );
-
+    axios
+      .get(`http://localhost:5000/doctor/profile/${doctorId}`, {
+        headers: { Authorization: `Bearer ${token}` }
+      })
+      .then((res) => {
         setDoctor(res.data);
-
         setFormData({
           hospital: res.data.hospital || "",
+          contact: res.data.contact || "",     // ✅ ADDED
           fee: res.data.fee || "",
           experience: res.data.experience_years || "",
           bio: res.data.bio || "",
-          timings: res.data.timings || "",
+          start_time: res.data.start_time?.slice(0, 5) || "",
+          end_time: res.data.end_time?.slice(0, 5) || ""
         });
-      } catch (err) {
-        console.error(err);
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    fetchProfile();
+      })
+      .finally(() => setLoading(false));
   }, [doctorId, token]);
 
   const handleChange = (e) => {
-    const { name, value } = e.target;
-    setFormData((prev) => ({ ...prev, [name]: value }));
+    setFormData({ ...formData, [e.target.name]: e.target.value });
   };
 
   const handleSave = async () => {
-    const { hospital, fee, experience, bio, timings } = formData;
-
-    if (!hospital || !fee || !experience || !bio || !timings) {
-      alert("Please fill all required fields");
-      return;
-    }
-
     setSaving(true);
     try {
       await axios.put(
@@ -64,89 +51,62 @@ const DoctorProfile = ({ doctorId, token }) => {
         { headers: { Authorization: `Bearer ${token}` } }
       );
       alert("Profile updated successfully");
-    } catch (err) {
-      alert("Failed to update profile");
-    } finally {
-      setSaving(false);
+    } catch {
+      alert("Update failed");
     }
+    setSaving(false);
   };
 
-  if (loading) return <p>Loading profile...</p>;
+  if (loading) return <p>Loading...</p>;
 
   return (
-    <>
-      <h3>👨‍⚕️ Profile</h3>
+    <div className="doctor-profile">
+      <h3>{doctor.fullname}</h3>
 
-      <div className="doctor-profile">
-        <h4>{doctor?.fullname}</h4>
+      <label>
+        Hospital
+        <input name="hospital" value={formData.hospital} onChange={handleChange} />
+      </label>
 
-        <p><strong>Specialization:</strong> {doctor?.specialization}</p>
-        <p><strong>Qualification:</strong> {doctor?.qualification}</p>
+      <label>
+        Contact   {/* ✅ ADDED */}
+        <input
+          name="contact"
+          value={formData.contact}
+          onChange={handleChange}
+          placeholder="Phone number"
+        />
+      </label>
 
-        <label>
-          <strong>Hospital / Clinic *</strong>
-          <input
-            className="input"
-            name="hospital"
-            placeholder="Enter hospital / clinic name"
-            value={formData.hospital}
-            onChange={handleChange}
-          />
-        </label>
+      <label>
+        Fee
+        <input type="number" name="fee" value={formData.fee} onChange={handleChange} />
+      </label>
 
+      <label>
+        Experience
+        <input type="number" name="experience" value={formData.experience} onChange={handleChange} />
+      </label>
 
-        <label>
-          <strong>Consultation Fee (₹) *</strong>
-          <input
-            className="input"
-            type="number"
-            name="fee"
-            placeholder="Enter fee"
-            value={formData.fee}
-            onChange={handleChange}
-          />
-        </label>
+      <label>
+        Bio
+        <textarea name="bio" value={formData.bio} onChange={handleChange} />
+      </label>
 
-        <label>
-          <strong>Experience (years) *</strong>
-          <input
-            className="input"
-            type="number"
-            name="experience"
-            placeholder="Years of experience"
-            value={formData.experience}
-            onChange={handleChange}
-          />
-        </label>
+      <label>
+        Start Time
+        <input type="time" name="start_time" value={formData.start_time} onChange={handleChange} />
+      </label>
 
-        <label>
-          <strong>Bio *</strong>
-          <textarea
-            className="input"
-            name="bio"
-            rows="4"
-            placeholder="Brief description about yourself"
-            value={formData.bio}
-            onChange={handleChange}
-          />
-        </label>
+      <label>
+        End Time
+        <input type="time" name="end_time" value={formData.end_time} onChange={handleChange} />
+      </label>
 
-        <label>
-          <strong>Timings *</strong>
-          <input
-            className="input"
-            name="timings"
-            placeholder="e.g. Mon-Sat 10:00 AM - 3:00 PM"
-            value={formData.timings}
-            onChange={handleChange}
-          />
-        </label>
-
-        <button className="save-btn" onClick={handleSave} disabled={saving}>
-          {saving ? "Saving..." : "Save Changes"}
-        </button>
-      </div>
-    </>
+      <button onClick={handleSave} disabled={saving}>
+        {saving ? "Saving..." : "Save Changes"}
+      </button>
+    </div>
   );
 };
 

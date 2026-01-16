@@ -3,14 +3,12 @@ import { useParams, useLocation, useNavigate } from "react-router-dom";
 import "./DoctorDetailPage.css";
 import Reviews from "../component/Reviews";
 
-
 export default function DoctorDetailPage() {
   const { id } = useParams();
   const location = useLocation();
   const navigate = useNavigate();
 
   const doctor = location.state?.doctor;
-
   const [showReviews, setShowReviews] = useState(false);
 
   if (!doctor) {
@@ -27,7 +25,14 @@ export default function DoctorDetailPage() {
           <p><strong>Qualification:</strong> {doctor.qualification}</p>
           <p><strong>Experience:</strong> {doctor.experience_years} years</p>
           <p><strong>Clinic / Hospital:</strong> {doctor.hospital}</p>
-          <p><strong>Timings:</strong> {doctor.timings}</p>
+
+          <p>
+            <strong>Timings:</strong>{" "}
+            {doctor.start_time && doctor.end_time
+              ? `${doctor.start_time.slice(0,5)} - ${doctor.end_time.slice(0,5)}`
+              : "Not available"}
+          </p>
+
           <p><strong>Contact:</strong> {doctor.contact}</p>
           <p><strong>Bio:</strong> {doctor.bio}</p>
 

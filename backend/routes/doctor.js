@@ -24,54 +24,31 @@ router.post("/register", async (req, res) => {
   }
 
   try {
-    const checkSql = "SELECT is_verified FROM doctorsdb WHERE email = ?";
-    db.query(checkSql, [email], async (err, rows) => {
-      if (err) return res.status(500).json({ message: "DB error" });
+    const hashedPassword = await bcrypt.hash(password, 10);
+    const token = crypto.randomBytes(32).toString("hex");
 
-      if (rows.length > 0) {
-        if (rows[0].is_verified) {
-          return res.status(409).json({ message: "Email already registered" });
-        }
+    db.query(
+      `
+      INSERT INTO doctorsdb
+      (fullname,email,password,qualification,specialization,licenseNumber,status,verification_token)
+      VALUES (?,?,?,?,?,?,'Pending',?)
+      `,
+      [fullname, email, hashedPassword, qualification, specialization, licenseNumber, token],
+      async (err) => {
+        if (err) return res.status(500).json({ message: "Registration failed" });
 
-        const token = crypto.randomBytes(32).toString("hex");
-        db.query(
-          "UPDATE doctorsdb SET verification_token=? WHERE email=?",
-          [token, email],
-          async () => {
-            const link = `http://localhost:5000/verify-email?token=${token}&role=doctor`;
-            await sendRegistrationMail(email, link);
-            return res.json({ message: "Verification mail resent" });
-          }
-        );
-        return;
+        const link = `http://localhost:5000/verify-email?token=${token}&role=doctor`;
+        await sendRegistrationMail(email, link);
+
+        res.status(201).json({ message: "Verification mail sent" });
       }
-
-      const hashedPassword = await bcrypt.hash(password, 10);
-      const token = crypto.randomBytes(32).toString("hex");
-
-      db.query(
-        `
-        INSERT INTO doctorsdb
-        (fullname,email,password,qualification,specialization,licenseNumber,status,verification_token)
-        VALUES (?,?,?,?,?,?,'Pending',?)
-        `,
-        [fullname, email, hashedPassword, qualification, specialization, licenseNumber, token],
-        async (err2) => {
-          if (err2) return res.status(500).json({ message: "Registration failed" });
-
-          const link = `http://localhost:5000/verify-email?token=${token}&role=doctor`;
-          await sendRegistrationMail(email, link);
-
-          res.status(201).json({ message: "Verification mail sent" });
-        }
-      );
-    });
+    );
   } catch {
     res.status(500).json({ message: "Server error" });
   }
 });
 
-/* ================= FETCH DOCTOR PROFILE (RATING FIXED) ================= */
+/* ================= FETCH DOCTOR PROFILE ================= */
 router.get("/profile/:doctorId", (req, res) => {
   const sql = `
     SELECT 
@@ -81,9 +58,11 @@ router.get("/profile/:doctorId", (req, res) => {
       d.qualification,
       d.hospital,
       d.fee,
+      d.contact,
       d.experience_years,
       d.bio,
-      d.timings,
+      d.start_time,
+      d.end_time,
       IFNULL(ROUND(AVG(r.rating),1),0) AS rating
     FROM doctorsdb d
     LEFT JOIN reviews r ON d.id = r.doctor_id
@@ -100,19 +79,19 @@ router.get("/profile/:doctorId", (req, res) => {
 
 /* ================= UPDATE DOCTOR PROFILE ================= */
 router.put("/profile/:doctorId", (req, res) => {
-  const { hospital, contact, fee, experience, bio, timings } = req.body;
+  const { hospital, contact, fee, experience, bio, start_time, end_time } = req.body;
 
-  if (!hospital || !fee || !experience || !bio || !timings) {
+  if (!hospital || !fee || !experience || !bio || !start_time || !end_time) {
     return res.status(400).json({ message: "All fields are required" });
   }
 
   db.query(
     `
     UPDATE doctorsdb
-    SET hospital=?, contact=?, fee=?, experience_years=?, bio=?, timings=?
+    SET hospital=?, contact=?, fee=?, experience_years=?, bio=?, start_time=?, end_time=?
     WHERE id=?
     `,
-    [hospital, fee, experience, bio, timings, req.params.doctorId],
+    [hospital, contact, fee, experience, bio, start_time, end_time, req.params.doctorId],
     (err) => {
       if (err) return res.status(500).json({ message: "Update failed" });
       res.json({ message: "Profile updated successfully" });
@@ -120,7 +99,7 @@ router.put("/profile/:doctorId", (req, res) => {
   );
 });
 
-/* ================= FETCH APPROVED DOCTORS (RATING FIXED) ================= */
+/* ================= FETCH APPROVED DOCTORS ================= */
 router.get("/approved/:specialty", (req, res) => {
   const sql = `
     SELECT 
@@ -130,9 +109,11 @@ router.get("/approved/:specialty", (req, res) => {
       d.qualification,
       d.hospital,
       d.fee,
+      d.contact,
       d.experience_years,
       d.bio,
-      d.timings,
+      d.start_time,
+      d.end_time,
       IFNULL(ROUND(AVG(r.rating),1),0) AS rating
     FROM doctorsdb d
     LEFT JOIN reviews r ON d.id = r.doctor_id
@@ -196,15 +177,12 @@ router.get("/appointments/:doctorId", (req, res) => {
   );
 });
 
-
-
 /* ================= COMPLETE APPOINTMENT ================= */
 router.post("/appointments/:id/complete", upload.single("file"), (req, res) => {
   const appointmentId = req.params.id;
   const { doctorNotes, prescriptionDetails } = req.body;
   const fileUrl = req.file ? `/uploads/${req.file.filename}` : null;
 
-  // Get appointment time & patient id
   db.query(
     "SELECT appointment_time, patient_id FROM appointments WHERE id=?",
     [appointmentId],
@@ -213,16 +191,12 @@ router.post("/appointments/:id/complete", upload.single("file"), (req, res) => {
         return res.status(404).json({ message: "Appointment not found" });
       }
 
-      // Block early completion
       if (new Date(rows[0].appointment_time) > new Date()) {
-        return res
-          .status(400)
-          .json({ message: "Cannot complete appointment before appointment time" });
+        return res.status(400).json({ message: "Cannot complete appointment early" });
       }
 
       const patientId = rows[0].patient_id;
 
-      //  Mark appointment completed
       db.query(
         `
         UPDATE appointments
@@ -231,11 +205,8 @@ router.post("/appointments/:id/complete", upload.single("file"), (req, res) => {
         `,
         [doctorNotes, appointmentId],
         (err) => {
-          if (err) {
-            return res.status(500).json({ message: "Failed to update appointment" });
-          }
+          if (err) return res.status(500).json({ message: "Failed to update" });
 
-          // Save prescription (patient side)
           db.query(
             `
             INSERT INTO prescriptions
@@ -243,21 +214,14 @@ router.post("/appointments/:id/complete", upload.single("file"), (req, res) => {
             VALUES (?,?,?)
             `,
             [appointmentId, prescriptionDetails, fileUrl],
-            (err) => {
-              if (err) {
-                return res.status(500).json({ message: "Failed to save prescription" });
-              }
-
-              //  Notify patient
+            () => {
               db.query(
                 `
                 INSERT INTO notifications (user_id, message, type)
                 VALUES (?, 'Your prescription is available', 'PRESCRIPTION')
                 `,
                 [patientId],
-                () => {
-                  res.json({ message: "Appointment completed successfully" });
-                }
+                () => res.json({ message: "Appointment completed successfully" })
               );
             }
           );
@@ -266,7 +230,6 @@ router.post("/appointments/:id/complete", upload.single("file"), (req, res) => {
     }
   );
 });
-
 
 /* ================= DOCTOR NOTIFICATIONS ================= */
 router.get("/notifications/:doctorId", (req, res) => {
@@ -285,21 +248,6 @@ router.get("/notifications/:doctorId", (req, res) => {
   );
 });
 
-/* ================= TEST NOTIFICATION (EASY) ================= */
-router.post("/notifications/test/:doctorId", (req, res) => {
-  const doctorId = req.params.doctorId;
-
-  const message = "🧪 Test Notification: You have an appointment reminder";
-
-  db.query(
-    "INSERT INTO notifications (user_id, message) VALUES (?, ?)",
-    [doctorId, message],
-    (err) => {
-      if (err) return res.status(500).json({ message: "Failed" });
-      res.json({ message: "Test notification added" });
-    }
-  );
-});
 /* ================= MARK NOTIFICATION AS READ ================= */
 router.put("/notifications/read/:id", (req, res) => {
   db.query(
