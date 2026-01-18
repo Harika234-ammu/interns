@@ -11,7 +11,7 @@ router.post("/login", (req, res) => {
   const { email, password } = req.body;
 
   // PATIENT LOGIN
-  const patientQuery = "SELECT * FROM patientdb WHERE email = ?";
+  const patientQuery = "SELECT * FROM Patientdb WHERE email = ?";
   db.query(patientQuery, [email], async (err, result) => {
     if (err) return res.status(500).json({ message: "DB error" });
 
@@ -22,20 +22,45 @@ router.post("/login", (req, res) => {
         return res.status(403).json({ message: "Please verify your email" });
       }
 
-      const match = await bcrypt.compare(password, patient.password);
-      if (!match) return res.status(401).json({ message: "Invalid credentials" });
+      // 🔹 TEMP PASSWORD LOGIN (PATIENT)
+       if (patient.is_temp_password) {
+         if (new Date(patient.temp_password_expiry) < new Date()) {
+           return res.status(403).json({ message: "Temporary password expired" });
+         }
+       
+         const match = await bcrypt.compare(password, patient.password);
+         if (!match) return res.status(401).json({ message: "Invalid credentials" });
+       
+         const token = jwt.sign(
+           { id: patient.id, role: "patient", forcePasswordChange: true },
+           process.env.JWT_SECRET,
+           { expiresIn: "10m" }
+         );
+       
+         return res.json({
+           token,
+           role: "patient",
+           mustChangePassword: true,
+           fullname: patient.fullname
+         });
+       }
+       
+       // 🔹 NORMAL LOGIN (PATIENT)
+       const match = await bcrypt.compare(password, patient.password);
+       if (!match) return res.status(401).json({ message: "Invalid credentials" });
+       
+       const token = jwt.sign(
+         { id: patient.id, role: "patient" },
+         process.env.JWT_SECRET,
+         { expiresIn: "1h" }
+       );
+       
+       return res.json({
+         token,
+         role: "patient",
+         fullname: patient.fullname
+       });
 
-      const token = jwt.sign(
-        { id: patient.id, role: "patient" },
-        process.env.JWT_SECRET,
-        { expiresIn: "1h" }
-      );
-
-      return res.json({
-        token,
-        role: "patient",
-        fullname: patient.fullname   // ✅ VERY IMPORTANT
-      });
     }
 
     // DOCTOR LOGIN
@@ -49,6 +74,30 @@ router.post("/login", (req, res) => {
         if (!doctor.is_verified) {
           return res.status(403).json({ message: "Please verify your email" });
         }
+
+                // 🔹 TEMP PASSWORD LOGIN (DOCTOR)
+        if (doctor.is_temp_password) {
+          if (new Date(doctor.temp_password_expiry) < new Date()) {
+            return res.status(403).json({ message: "Temporary password expired" });
+          }
+        
+          const match = await bcrypt.compare(password, doctor.password);
+          if (!match) return res.status(401).json({ message: "Invalid credentials" });
+        
+          const token = jwt.sign(
+            { id: doctor.id, role: "doctor", forcePasswordChange: true },
+            process.env.JWT_SECRET,
+            { expiresIn: "10m" }
+          );
+        
+          return res.json({
+            token,
+            role: "doctor",
+            mustChangePassword: true,
+            fullname: doctor.fullname
+          });
+        }
+
         if (doctor.status === "Pending") {
           return res.status(403).json({ message: "Pending admin approval" });
         }
@@ -81,6 +130,35 @@ router.post("/login", (req, res) => {
       return res.status(401).json({ message: "Invalid credentials" });
     });
   });
+});
+
+
+router.post("/change-password", async (req, res) => {
+  const { newPassword } = req.body;
+  const token = req.headers.authorization?.split(" ")[1];
+
+  if (!token) return res.status(401).json({ message: "Unauthorized" });
+
+  const decoded = jwt.verify(token, process.env.JWT_SECRET);
+
+  const hashed = await bcrypt.hash(newPassword, 10);
+
+  const table = decoded.role === "doctor" ? "doctorsdb" : "Patientdb";
+
+  db.query(
+    `
+    UPDATE ${table}
+    SET password=?, is_temp_password=false, temp_password_expiry=NULL
+    WHERE id=?
+    `,
+    [hashed, decoded.id],
+    () => {
+      if (decoded.role === "doctor") {
+        return res.json({ message: "Password updated. Awaiting admin approval." });
+      }
+      res.json({ message: "Password updated successfully" });
+    }
+  );
 });
 
 

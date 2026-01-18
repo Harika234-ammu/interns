@@ -25,7 +25,7 @@ const PatientRegister = () => {
 
     const { fullname, email, password } = formDetails;
 
-    // 🔴 Frontend validation
+    //  Frontend validation
     if (!fullname || !email || !password) {
       setError("Please fill all required fields");
       return;

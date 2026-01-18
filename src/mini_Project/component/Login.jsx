@@ -35,7 +35,7 @@ const Login = () => {
         return;
       }
 
-      // ✅ SAVE EVERYTHING NEEDED
+      //  SAVE EVERYTHING NEEDED
       localStorage.setItem("token", result.token);
       localStorage.setItem("role", result.role);
       localStorage.setItem("fullname", result.fullname); // ⭐ IMPORTANT
@@ -47,13 +47,14 @@ const Login = () => {
         showConfirmButton: false,
       });
 
-      if (result.role === "doctor") {
+      if (result.mustChangePassword) {
+        navigate("/change-password");
+      }else if (result.role === "doctor") {
         navigate("/DocDashboard");
-      } else if (result.role === "patient") {
+      }else if (result.role === "patient") {
         navigate("/PatientDash");
-      } else if (result.role === "admin") {
-        navigate("/AdminDashboard");
       }
+
     } catch (error) {
       console.error("Login error:", error);
       Swal.fire("Server Error", "Backend not responding", "error");
@@ -103,7 +104,10 @@ const Login = () => {
               </span>
             </div>
           </div>
-
+          <p className="link">
+            Forgot password?
+            <span onClick={() => navigate("/forgot-password")}> Forgot Password</span>
+          </p>
           <button type="submit" className="modern-login-btn">
             Sign in
           </button>

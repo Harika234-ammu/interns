@@ -22,6 +22,7 @@ import DoctorDetailPage from "./pages/DoctorDetailPage";
 import BookingPage from "./pages/BookingPage";
 import ConfirmationPage from "./pages/ConfirmationPage";
 import PaymentPage from "./pages/PaymentPage";
+import ChangePassword from './component/ChangePassword';
 // import Notifications from './component/Notifications';
 // import Reviews from './component/Reviews';
 // import Appointments from './component/Appointments';
@@ -53,6 +54,8 @@ const App =() => {
         <Route path="/book" element={<BookingPage />} />
         <Route path="/confirmation" element={<ConfirmationPage />} />
         <Route path="/payment" element={<PaymentPage />} />
+        <Route path="/change-password" element={<ChangePassword />} />
+
         {/* <Route path='/notification' element={<Notifications/>} />
         <Route path='reviews' element={<Reviews/>} />
         <Route path='/appointments' element={<Appointments/>} /> */}
