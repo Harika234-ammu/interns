@@ -23,6 +23,7 @@ app.use("/patient", patientRoutes);
 app.use("/patient", patientProfileRoutes);  
 app.use("/patient", patientAppointments);
 
+app.use("/uploads", express.static("uploads"));
 app.use("/doctor", doctorRoutes);
 app.use("/admin", adminRoutes);
 

@@ -13,7 +13,9 @@ cron.schedule("* * * * *", () => {
     FROM appointments a
     JOIN patientdb p ON a.patient_id = p.id
     WHERE a.status='Scheduled'
-      AND TIMESTAMPDIFF(HOUR, NOW(), a.appointment_time) BETWEEN 23 AND 24
+      AND a.appointment_time BETWEEN
+        DATE_ADD(UTC_TIMESTAMP(), INTERVAL 23 HOUR)
+        AND DATE_ADD(UTC_TIMESTAMP(), INTERVAL 25 HOUR)
       AND NOT EXISTS (
         SELECT 1 FROM notifications n
         WHERE n.user_id = a.doctor_id
@@ -39,7 +41,9 @@ cron.schedule("* * * * *", () => {
     FROM appointments a
     JOIN patientdb p ON a.patient_id = p.id
     WHERE a.status='Scheduled'
-      AND TIMESTAMPDIFF(MINUTE, NOW(), a.appointment_time) BETWEEN 29 AND 30
+      AND a.appointment_time BETWEEN
+        DATE_ADD(UTC_TIMESTAMP(), INTERVAL 25 MINUTE)
+        AND DATE_ADD(UTC_TIMESTAMP(), INTERVAL 35 MINUTE)
       AND NOT EXISTS (
         SELECT 1 FROM notifications n
         WHERE n.user_id = a.doctor_id

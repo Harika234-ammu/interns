@@ -161,24 +161,45 @@ router.post("/book", verifyToken, (req, res) => {
         (err2) => {
           if (err2) return res.status(500).json({ message: "Booking failed" });
 
-          // 🔔 Notify doctor
-          db.query(
-            `
-            INSERT INTO notifications (user_id, message, type)
-            VALUES (
-              ?,
-              CONCAT(
-                'You have an appointment with ',
-                (SELECT fullname FROM patientdb WHERE id=?),
-                ' on ',
-                DATE_FORMAT(?, '%d %b %Y %h:%i %p')
-              ),
-              'APPOINTMENT'
-            )
-            `,
-            [doctor_id, req.userId, appointment_time],
-            () => res.status(201).json({ message: "Appointment booked" })
-          );
+           // 🔔 Notify doctor
+         db.query(
+           `
+           INSERT INTO notifications (user_id, message, type)
+           VALUES (
+             ?,
+             CONCAT(
+               'You have an appointment with ',
+               (SELECT fullname FROM patientdb WHERE id=?),
+               ' on ',
+               DATE_FORMAT(?, '%d %b %Y %h:%i %p')
+             ),
+             'APPOINTMENT'
+           )
+           `,
+           [doctor_id, req.userId, appointment_time],
+           () => {
+             // 🔔 Notify patient
+             db.query(
+               `
+               INSERT INTO notifications (user_id, message, type)
+               VALUES (
+                 ?,
+                 CONCAT(
+                   'You have an appointment with Dr. ',
+                   (SELECT fullname FROM doctorsdb WHERE id=?),
+                   ' on ',
+                   DATE_FORMAT(?, '%d %b %Y %h:%i %p')
+                 ),
+                 'APPOINTMENT'
+               )
+               `,
+               [req.userId, doctor_id, appointment_time],
+               () => res.status(201).json({ message: "Appointment booked" })
+             );
+           }
+         );
+
+
         }
       );
     }
@@ -189,21 +210,82 @@ router.post("/book", verifyToken, (req, res) => {
 router.get("/prescriptions", verifyToken, (req, res) => {
   db.query(
     `
-    SELECT pr.id, pr.prescription_details, pr.file_url, pr.created_at,
-           d.fullname AS doctorName
+    SELECT 
+      pr.id,
+      pr.prescription_details,
+      pr.file_url,
+      pr.created_at,
+      a.doctor_notes,
+      d.fullname AS doctorName
     FROM prescriptions pr
-    JOIN appointments a ON pr.appointment_id=a.id
-    JOIN doctorsdb d ON a.doctor_id=d.id
-    WHERE a.patient_id=?
+    JOIN appointments a ON pr.appointment_id = a.id
+    JOIN doctorsdb d ON a.doctor_id = d.id
+    WHERE a.patient_id = ?
     ORDER BY pr.created_at DESC
     `,
     [req.userId],
     (err, rows) => {
-      if (err) return res.status(500).json([]);
+      if (err) {
+        console.error("Prescription fetch error:", err);
+        return res.status(500).json([]);
+      }
       res.json(rows);
     }
   );
 });
+
+
+
+/* ================= ADD PATIENT REVIEW ================= */
+router.post("/reviews", verifyToken, (req, res) => {
+  const { appointment_id, rating, comment } = req.body;
+
+  if (!appointment_id || !rating) {
+    return res.status(400).json({ message: "Appointment and rating required" });
+  }
+
+  //  Check appointment belongs to patient & is completed
+  db.query(
+    `
+    SELECT doctor_id
+    FROM appointments
+    WHERE id=? AND patient_id=? AND status='Completed'
+    `,
+    [appointment_id, req.userId],
+    (err, rows) => {
+      if (err) return res.status(500).json({ message: "Database error" });
+      if (!rows.length) {
+        return res.status(403).json({ message: "Invalid appointment" });
+      }
+
+      const doctorId = rows[0].doctor_id;
+
+      // Prevent duplicate review
+      db.query(
+        "SELECT id FROM reviews WHERE appointment_id=?",
+        [appointment_id],
+        (err2, rows2) => {
+          if (rows2.length) {
+            return res.status(409).json({ message: "Review already submitted" });
+          }
+
+          // Insert review
+          db.query(
+            `
+            INSERT INTO reviews
+            (appointment_id, doctor_id, patient_id, rating, comment)
+            VALUES (?,?,?,?,?)
+            `,
+            [appointment_id, doctorId, req.userId, rating, comment || null],
+            () => res.status(201).json({ message: "Review submitted successfully" })
+          );
+        }
+      );
+    }
+  );
+});
+
+
 
 // ================= CANCEL APPOINTMENT =================
 router.put("/appointments/cancel/:id", verifyToken, (req, res) => {
@@ -270,5 +352,23 @@ router.get("/doctor-slots/:doctorId/:date", verifyToken, (req, res) => {
     }
   );
 });
+
+/* ================= PATIENT NOTIFICATIONS ================= */
+router.get("/notifications", verifyToken, (req, res) => {
+  db.query(
+    `
+    SELECT id, message, is_read, created_at
+    FROM notifications
+    WHERE user_id=?
+    ORDER BY created_at DESC
+    `,
+    [req.userId],
+    (err, rows) => {
+      if (err) return res.status(500).json([]);
+      res.json(rows);
+    }
+  );
+});
+
 
 export default router;

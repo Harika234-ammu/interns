@@ -179,8 +179,23 @@ const PatientDashboard = () => {
         html: res.data.map(p => `
           <div style="text-align:left;margin-bottom:12px">
             <p><b>Doctor:</b> ${p.doctorName}</p>
+            <p><b>Doctor Notes:</b><br/>${p.doctor_notes || "—"}</p>
             <p><b>Prescription:</b><br/>${p.prescription_details}</p>
-            <small>${new Date(p.created_at).toLocaleString()}</small>
+
+             ${p.file_url ? `
+               <a
+                 href="http://localhost:5000${p.file_url}"
+                 target="_blank"
+                 rel="noopener noreferrer"
+                 style="color:#2563eb;text-decoration:underline"
+               >
+                 View Uploaded File
+               </a>
+             ` : ""}
+             
+             <br/>
+             <small>${new Date(p.created_at).toLocaleString()}</small>
+
             <hr/>
           </div>
         `).join("")
@@ -296,7 +311,7 @@ const PatientDashboard = () => {
               className="book-btn"
               style={{ marginTop: "12px", width: "100%" }}
               disabled={!isProfileComplete}
-              onClick={() => navigate("/homepage")}
+              onClick={() => navigate("/symptoms")}
             >
               FIND DOCTOR & BOOK APPOINTMENT
             </button>

@@ -31,9 +31,17 @@ const Login = () => {
       const result = await response.json();
 
       if (!response.ok) {
-        Swal.fire("Login Failed", result.message || "Error", "error");
-        return;
-      }
+         const icon =
+         response.status === 403 ? "warning" : "error";
+
+          Swal.fire({
+          title: "Login Failed",
+          text: result.message || "Error",
+          icon: icon
+         });
+         return;
+         }
+
 
       //  SAVE EVERYTHING NEEDED
       localStorage.setItem("token", result.token);
@@ -105,8 +113,8 @@ const Login = () => {
             </div>
           </div>
           <p className="link">
-            Forgot password?
-            <span onClick={() => navigate("/forgot-password")}> Forgot Password</span>
+            Forgot Password??
+            <span className= "forgot-link" onClick={() => navigate("/forgot-password")}> Reset Password</span>
           </p>
           <button type="submit" className="modern-login-btn">
             Sign in

@@ -8,73 +8,49 @@ import "./BookingPage.css";
 export default function BookingPage() {
   const location = useLocation();
   const navigate = useNavigate();
-  const doctor = location.state?.doctor;
+
+  const passedDoctor = location.state?.doctor;
+  const [doctor, setDoctor] = useState(null);
 
   const [selectedDate, setSelectedDate] = useState("");
   const [selectedTime, setSelectedTime] = useState("");
-  const [timings, setTimings] = useState("");
   const [availableSlots, setAvailableSlots] = useState([]);
 
-  /* ================= SAFETY ================= */
+  /* ================= FETCH FULL DOCTOR PROFILE ================= */
   useEffect(() => {
-    if (!doctor) navigate("/doctors");
-  }, [doctor, navigate]);
+    if (!passedDoctor?.id) {
+      navigate("/doctors");
+      return;
+    }
 
-  /* ================= FETCH DOCTOR TIMINGS ================= */
-  useEffect(() => {
-    const fetchDoctor = async () => {
-      try {
-        const res = await axios.get(
-          `http://localhost:5000/doctor/profile/${doctor.id}`
-        );
-        setTimings(res.data.timings || "");
-      } catch {
-        setTimings("");
-      }
-    };
-    fetchDoctor();
-  }, [doctor]);
+    const token = localStorage.getItem("token");
 
-  /* ================= SLOT HELPERS ================= */
-  const parseTimings = (timings) => {
-    // Example: "10:00 am to 03:00 pm"
-    const [startRaw, endRaw] = timings.toLowerCase().split("to");
+    axios
+      .get(`http://localhost:5000/doctor/profile/${passedDoctor.id}`, {
+        headers: { Authorization: `Bearer ${token}` }
+      })
+      .then(res => setDoctor(res.data))
+      .catch(() => navigate("/doctors"));
+  }, [passedDoctor, navigate]);
 
-    const to24 = (t) => {
-      let [time, mer] = t.trim().split(" ");
-      let [h, m] = time.split(":").map(Number);
-      if (mer === "pm" && h !== 12) h += 12;
-      if (mer === "am" && h === 12) h = 0;
-      return `${String(h).padStart(2, "0")}:${String(m).padStart(2, "0")}`;
-    };
-
-    return { start: to24(startRaw), end: to24(endRaw) };
+  const toMinutes = (time) => {
+    const [h, m] = time.slice(0, 5).split(":").map(Number);
+    return h * 60 + m;
   };
 
   const generateSlots = (start, end) => {
     const slots = [];
-    let cur = new Date();
-    let [sh, sm] = start.split(":").map(Number);
-    let [eh, em] = end.split(":").map(Number);
-
-    cur.setHours(sh, sm, 0, 0);
-    const endTime = new Date();
-    endTime.setHours(eh, em, 0, 0);
-
-    while (cur < endTime) {
-      slots.push(
-        `${String(cur.getHours()).padStart(2, "0")}:${String(
-          cur.getMinutes()
-        ).padStart(2, "0")}`
-      );
-      cur.setMinutes(cur.getMinutes() + 30);
+    for (let t = start; t < end; t += 30) {
+      const h = Math.floor(t / 60);
+      const m = t % 60;
+      slots.push(`${String(h).padStart(2, "0")}:${String(m).padStart(2, "0")}`);
     }
     return slots;
   };
 
-  /* ================= FETCH SLOTS ================= */
+  /* ================= FETCH AVAILABLE SLOTS ================= */
   useEffect(() => {
-    if (!selectedDate || !timings) {
+    if (!selectedDate || !doctor?.start_time || !doctor?.end_time) {
       setAvailableSlots([]);
       return;
     }
@@ -88,28 +64,31 @@ export default function BookingPage() {
           { headers: { Authorization: `Bearer ${token}` } }
         );
 
-        const bookedTimes = (res.data || []).map(t => t.slice(0, 5));
-        const { start, end } = parseTimings(timings);
-        const allSlots = generateSlots(start, end);
+        const booked = (res.data || []).map(t => t.slice(0, 5));
 
-        const slotsWithStatus = allSlots.map(time => ({
-          time,
-          booked: bookedTimes.includes(time)
-        }));
+        const allSlots = generateSlots(
+          toMinutes(doctor.start_time),
+          toMinutes(doctor.end_time)
+        );
 
-        setAvailableSlots(slotsWithStatus);
+        setAvailableSlots(
+          allSlots.map(time => ({
+            time,
+            booked: booked.includes(time)
+          }))
+        );
       } catch {
         setAvailableSlots([]);
       }
     };
 
     fetchSlots();
-  }, [selectedDate, timings, doctor]);
+  }, [selectedDate, doctor]);
 
   /* ================= BOOK ================= */
   const handleBooking = async () => {
     if (!selectedDate || !selectedTime) {
-      Swal.fire("Missing Data", "Please select date and time", "warning");
+      Swal.fire("Missing", "Select date & time", "warning");
       return;
     }
 
@@ -120,7 +99,6 @@ export default function BookingPage() {
       await axios.post(
         "http://localhost:5000/patient/book",
         {
-          patient_id: decoded.id,
           doctor_id: doctor.id,
           appointment_time: `${selectedDate} ${selectedTime}:00`,
           symptoms: ["General Checkup"]
@@ -128,19 +106,18 @@ export default function BookingPage() {
         { headers: { Authorization: `Bearer ${token}` } }
       );
 
-      Swal.fire("Success", "Appointment booked successfully", "success")
-        .then(() => {
-          navigate("/confirmation", {
-            state: { doctor, date: selectedDate, time: selectedTime }
-          });
-        });
-
+      Swal.fire("Success", "Appointment booked", "success").then(() =>
+        navigate("/confirmation", {
+          state: { doctor, date: selectedDate, time: selectedTime }
+        })
+      );
     } catch {
-      Swal.fire("Error", "Selected slot is already booked", "error");
+      Swal.fire("Error", "Slot already booked", "error");
     }
   };
 
-  /* ================= UI ================= */
+  if (!doctor) return <p>Loading...</p>;
+
   return (
     <div className="booking-page">
       <h2>Book Appointment</h2>
@@ -163,33 +140,26 @@ export default function BookingPage() {
 
       <h4>Step 2: Choose Time Slot</h4>
 
-      {!timings && selectedDate && (
-        <p className="warning">❌ Doctor not available</p>
-      )}
+      <select
+        value={selectedTime}
+        onChange={(e) => setSelectedTime(e.target.value)}
+      >
+        <option value="">
+          {availableSlots.length === 0
+            ? "No slots available"
+            : "Select time"}
+        </option>
 
-      {timings && availableSlots.length > 0 && (
-        <select
-          value={selectedTime}
-          onChange={(e) => setSelectedTime(e.target.value)}
-        >
-          <option value="">Select time</option>
-          {availableSlots.map(slot => (
-            <option
-              key={slot.time}
-              value={slot.time}
-              disabled={slot.booked}
-            >
-              {slot.time} {slot.booked ? "(Booked)" : ""}
-            </option>
-          ))}
-        </select>
-      )}
-
-      {timings &&
-        availableSlots.length > 0 &&
-        availableSlots.every(s => s.booked) && (
-          <p className="warning">ℹ️ All slots are booked for this date</p>
-        )}
+        {availableSlots.map(slot => (
+          <option
+            key={slot.time}
+            value={slot.time}
+            disabled={slot.booked}
+          >
+            {slot.time} {slot.booked ? "(Booked)" : ""}
+          </option>
+        ))}
+      </select>
 
       <button className="proceed-btn" onClick={handleBooking}>
         Confirm Appointment

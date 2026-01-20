@@ -8,9 +8,11 @@ export default function DoctorPage() {
   const { doctors, specialty } = location.state || {};
 
   if (!doctors || doctors.length === 0) {
-    return <p style={{ textAlign: "center", marginTop: "50px" }}>
-      No doctors found for {specialty}
-    </p>;
+    return (
+      <p style={{ textAlign: "center", marginTop: "50px" }}>
+        No doctors found for {specialty}
+      </p>
+    );
   }
 
   return (
@@ -19,36 +21,31 @@ export default function DoctorPage() {
 
       <div className="doctor-page-container">
         {doctors.map((doc) => (
-          <div key={doc._id || doc.id} className="doctor-card">
+          <div key={doc.id} className="doctor-card">
             <div className="doctor-info">
               <h3>{doc.fullname}</h3>
 
               <p><strong>Specialty:</strong> {doc.specialization}</p>
               <p><strong>Fee:</strong> ₹{doc.fee}</p>
-              <p><strong>Rating:</strong> ⭐ {doc.rating ?? "0.0" } / 5</p>
+              <p><strong>Rating:</strong> ⭐ {doc.rating ?? "0.0"} / 5</p>
+
+              <p><strong>Hospital:</strong> {doc.hospital}</p>
+              <p><strong>Experience:</strong> {doc.experience_years} years</p>
 
               <p>
-                <strong>Hospital:</strong>{" "}
-                <a
-                  href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(doc.hospital)}`}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                >
-                  {doc.hospital}
-                </a>
+                <strong>Timings:</strong>{" "}
+                {doc.start_time && doc.end_time
+                  ? `${doc.start_time.slice(0,5)} - ${doc.end_time.slice(0,5)}`
+                  : "Not available"}
               </p>
 
-              <p><strong>Experience:</strong> {doc.experience_years} years</p>
-              <p><strong>Timings:</strong> {doc.timings}</p>
               <p><strong>Bio:</strong> {doc.bio}</p>
             </div>
 
             <button
               className="profile-btn"
               onClick={() =>
-                navigate("/doctor/" + (doc._id || doc.id), {
-                  state: { doctor: doc }
-                })
+                navigate("/doctor/" + doc.id, { state: { doctor: doc } })
               }
             >
               View Profile

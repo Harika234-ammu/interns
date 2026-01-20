@@ -34,11 +34,10 @@ const DoctorRegister = () => {
     "other"
   ];
 
-  const [error, setError] = useState("");
+
 
   const handleChange = (e) => {
     setFormDetails({ ...formDetails, [e.target.name]: e.target.value });
-    setError("");
   };
 
   const handleSubmit = async (e) => {
@@ -63,13 +62,17 @@ const DoctorRegister = () => {
       if (response.ok) {
         Swal.fire({
           title: "Registration Successful",
-          text: "Await admin approval before login.",
+          text: "Please verify your email before login.",
           icon: "success",
           confirmButtonColor: "#3085d6"
         }).then(() => navigate("/Login"));
-      } else {
-        Swal.fire("Registration Failed", result.message || "Try again!", "error");
-      }
+      }else {
+      Swal.fire({
+        title: "Registration Failed",
+        text: result.message || "Try again!",
+        icon: "error",
+      });
+    }
     } catch (err) {
       Swal.fire("Server Error", "Backend not responding. Try again later", "error");
     }

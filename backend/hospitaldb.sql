@@ -123,3 +123,10 @@ ADD COLUMN verification_token VARCHAR(255);
 ALTER TABLE doctorsdb
 ADD COLUMN is_verified BOOLEAN DEFAULT FALSE,
 ADD COLUMN verification_token VARCHAR(255);
+
+ALTER TABLE doctorsdb
+ADD COLUMN start_time TIME NULL,
+ADD COLUMN end_time TIME NULL;
+
+ALTER TABLE doctorsdb
+ADD COLUMN contact VARCHAR(20);
